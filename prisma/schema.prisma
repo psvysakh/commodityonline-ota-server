@@ -1,0 +1,47 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Channel {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  updates   Update[]
+}
+
+model Update {
+  id             String   @id @default(uuid())
+  runtimeVersion String
+  platform       String   // "ios" | "android"
+  channelId      String
+  channel        Channel  @relation(fields: [channelId], references: [id])
+  assets         Asset[]
+  message        String?  // Optional description for the update (e.g., "Rollback to...")
+  extra          String?
+  installs       Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  
+  @@index([runtimeVersion, platform])
+}
+
+model Asset {
+  id        String   @id @default(uuid())
+  hash      String
+  key       String   // The unique key for expo client
+  meta      String?  // JSON string for extra metadata (like type: "bundle" or "image")
+  fileExt   String   // "bundle", "png", "js", etc.
+  updateId  String
+  update    Update   @relation(fields: [updateId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
