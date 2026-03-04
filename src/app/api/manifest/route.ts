@@ -95,12 +95,16 @@ export async function GET(req: NextRequest) {
         })
     }
 
-    // Build asset URLs using the exact host the client used to reach this endpoint.
-    // In Next.js, req.url might default to localhost, so we MUST check the Host header.
-    // For Android emulators, this ensures the URL correctly uses 10.0.2.2:3000.
-    const host = req.headers.get('host') || 'localhost:3000'
-    const protocol = req.headers.get('x-forwarded-proto') || 'http'
-    const baseUrl = `${protocol}://${host}`
+    // Build asset URLs. Prefer the explicit NEXT_PUBLIC_BASE_URL env var so that
+    // reverse-proxy setups (e.g. Apache → Node on Cloudways) don't accidentally
+    // bake the internal 127.0.0.1:3000 address into the manifest that clients download.
+    const baseUrl =
+        process.env.NEXT_PUBLIC_BASE_URL?.replace(/\/$/, '') ||
+        (() => {
+            const host = req.headers.get('host') || 'localhost:3000'
+            const protocol = req.headers.get('x-forwarded-proto') || 'http'
+            return `${protocol}://${host}`
+        })()
 
     // --- Build manifest assets list ---
     const allAssets = update.assets.map((asset) => {
