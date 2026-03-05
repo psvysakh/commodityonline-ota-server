@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { ensureGlobalAssetsDir, getGlobalAssetPath, getGlobalBundlePath } from '@/lib/storage'
+import { validateUploadAuth } from '@/lib/upload-auth'
 import crypto from 'crypto'
 import fs from 'fs'
 import path from 'path'
@@ -23,6 +24,9 @@ import zlib from 'zlib'
  * If the file is missing AND no file was sent, a 422 is returned.
  */
 export async function POST(req: NextRequest) {
+    const authError = validateUploadAuth(req)
+    if (authError) return authError
+
     const updateId = req.nextUrl.searchParams.get('updateId')
     if (!updateId) {
         return NextResponse.json({ error: 'Missing ?updateId query parameter' }, { status: 400 })

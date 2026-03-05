@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { validateUploadAuth } from '@/lib/upload-auth'
 
 /**
  * POST /api/upload/begin
@@ -15,6 +16,8 @@ import { prisma } from '@/lib/prisma'
  *   extra           : string | null  (stringified JSON of app.json extra)
  */
 export async function POST(req: NextRequest) {
+    const authError = validateUploadAuth(req)
+    if (authError) return authError
     const body = await req.json()
     const { platform, runtimeVersion, channelName, extra = null } = body
 

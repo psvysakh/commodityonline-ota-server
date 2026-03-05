@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
 import { getGlobalAssetPath, getGlobalBundlePath } from '@/lib/storage'
+import { validateUploadAuth } from '@/lib/upload-auth'
 import fs from 'fs'
 
 /**
@@ -12,6 +12,9 @@ import fs from 'fs'
  * The publish script uses this to skip uploading assets that haven't changed.
  */
 export async function GET(req: NextRequest) {
+    const authError = validateUploadAuth(req)
+    if (authError) return authError
+
     const hash = req.nextUrl.searchParams.get('hash')
     const ext = req.nextUrl.searchParams.get('ext')
 
