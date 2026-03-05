@@ -4,6 +4,7 @@ import { ensureGlobalAssetsDir, getGlobalAssetPath, getGlobalBundlePath } from '
 import crypto from 'crypto'
 import fs from 'fs'
 import path from 'path'
+import zlib from 'zlib'
 
 /**
  * POST /api/upload/asset?updateId=<uuid>
@@ -51,7 +52,12 @@ export async function POST(req: NextRequest) {
     // Save the file to disk if provided and not already stored
     if (fileBlob) {
         if (!fs.existsSync(globalPath)) {
-            const buf = Buffer.from(await fileBlob.arrayBuffer())
+            let buf = Buffer.from(await fileBlob.arrayBuffer())
+            // Decompress if the client sent a gzip-compressed payload
+            const encoding = (formData.get('encoding') as string) ?? 'identity'
+            if (encoding === 'gzip') {
+                buf = zlib.gunzipSync(buf)
+            }
             fs.mkdirSync(path.dirname(globalPath), { recursive: true })
             fs.writeFileSync(globalPath, buf)
         }
