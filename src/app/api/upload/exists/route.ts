@@ -6,10 +6,7 @@ import fs from 'fs'
 /**
  * GET /api/upload/exists?hash=<hash>&ext=<ext>
  *
- * Check whether an asset with this hash already exists in the server's global pool.
- * Returns { exists: true } if the file is on disk, { exists: false } otherwise.
- *
- * The publish script uses this to skip uploading assets that haven't changed.
+ * Check whether a single asset exists in the server's global pool.
  */
 export async function GET(req: NextRequest) {
     const authError = validateUploadAuth(req)
@@ -26,4 +23,33 @@ export async function GET(req: NextRequest) {
     const exists = fs.existsSync(globalPath)
 
     return NextResponse.json({ exists })
+}
+
+/**
+ * POST /api/upload/exists
+ *
+ * Bulk-check multiple assets.
+ * Expects body: { assets: { hash, ext }[] }
+ * Returns: { missingHashes: string[] }
+ */
+export async function POST(req: NextRequest) {
+    const authError = validateUploadAuth(req)
+    if (authError) return authError
+
+    try {
+        const body = await req.json()
+        const assets: { hash: string; ext: string }[] = body.assets || []
+
+        const missingHashes = []
+        for (const { hash, ext } of assets) {
+            const globalPath = ext === 'bundle' ? getGlobalBundlePath(hash) : getGlobalAssetPath(hash, ext)
+            if (!fs.existsSync(globalPath)) {
+                missingHashes.push(hash)
+            }
+        }
+
+        return NextResponse.json({ missingHashes })
+    } catch (e) {
+        return NextResponse.json({ error: 'Invalid payload' }, { status: 400 })
+    }
 }
