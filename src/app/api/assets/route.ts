@@ -6,13 +6,12 @@ import { getAssetPath, getGlobalAssetPath, getGlobalBundlePath } from '@/lib/sto
 /**
  * GET /api/assets?assetId=<id>
  *
- * Serves a binary asset (JS bundle, image, font, …) for an Expo update.
+ * Serves or redirects to a binary asset (JS bundle, image, font, …) for an Expo update.
  *
- * The expo-updates client uses the URLs returned by /api/manifest and expects:
- *   - The correct Content-Type for the asset
- *   - An `expo-asset-metadata` header containing the SHA-256 hash so the
- *     client can verify integrity
- *   - Long-lived `Cache-Control` (assets are content-addressed by their hash)
+ * Strategy:
+ * 1. If the asset has an r2Url in its metadata → redirect (302) to Cloudflare R2 CDN.
+ *    This offloads all bandwidth from Cloudways to Cloudflare's global network.
+ * 2. Fallback: serve the file directly from disk (for legacy updates before R2 migration).
  */
 export async function GET(req: NextRequest) {
     return handleRequest(req, true)
@@ -30,21 +29,33 @@ async function handleRequest(req: NextRequest, includeBody: boolean) {
         return NextResponse.json({ error: 'Missing assetId query parameter' }, { status: 400 })
     }
 
-    // Look up the asset record in the database
-    const asset = await prisma.asset.findUnique({
-        where: { id: assetId },
-    })
+    const asset = await prisma.asset.findUnique({ where: { id: assetId } })
 
     if (!asset) {
         return NextResponse.json({ error: 'Asset not found' }, { status: 404 })
     }
 
-    // 1. Try resolving from the new global hash-based pool
+    // ─── Strategy 1: Redirect to Cloudflare R2 CDN (new uploads) ──────────────
+    if (asset.meta) {
+        try {
+            const meta = JSON.parse(asset.meta)
+            if (meta.r2Url) {
+                // Redirect the Expo client directly to R2 — zero bandwidth used on our VPS!
+                return NextResponse.redirect(meta.r2Url, {
+                    status: 302,
+                    headers: {
+                        'Cache-Control': 'public, max-age=31536000, immutable',
+                    },
+                })
+            }
+        } catch { /* fall through to disk */ }
+    }
+
+    // ─── Strategy 2: Fallback — serve from disk (legacy updates) ──────────────
     let filePath = asset.fileExt === 'bundle'
         ? getGlobalBundlePath(asset.hash)
         : getGlobalAssetPath(asset.hash, asset.fileExt)
 
-    // 2. Fallback for backwards compatibility with old updates
     if (!fs.existsSync(filePath)) {
         const filename = getStoredFilename(asset)
         let physicalUpdateId = asset.updateId
@@ -59,10 +70,7 @@ async function handleRequest(req: NextRequest, includeBody: boolean) {
 
     if (!fs.existsSync(filePath)) {
         console.error(`Asset file missing on disk: ${filePath}`)
-        return NextResponse.json(
-            { error: 'Asset file not found on server disk' },
-            { status: 404 }
-        )
+        return NextResponse.json({ error: 'Asset file not found on server' }, { status: 404 })
     }
 
     const fileBuffer = fs.readFileSync(filePath)
@@ -72,7 +80,6 @@ async function handleRequest(req: NextRequest, includeBody: boolean) {
         status: 200,
         headers: {
             'Content-Type': contentType,
-            // Assets are immutable (content-addressed), cache forever
             'Cache-Control': 'public, max-age=31536000, immutable',
             'Content-Length': String(fileBuffer.length),
         },
@@ -84,30 +91,21 @@ async function handleRequest(req: NextRequest, includeBody: boolean) {
 // Helpers
 // ---------------------------------------------------------------------------
 
-/**
- * Reconstructs the filename used when the asset was written to disk by
- * upload/route.ts. Must stay in sync with that file's logic.
- */
 function getStoredFilename(asset: { key: string; fileExt: string; meta: string | null }): string {
-    // Bundle is always saved as "bundle.bundle"
     if (asset.key === 'bundle') return 'bundle.bundle'
-
-    // Extra assets: recover original filename from stored meta JSON
     if (asset.meta) {
         try {
             const meta = JSON.parse(asset.meta)
             if (meta.filename) return meta.filename
-        } catch {
-            // fall through to default
-        }
+        } catch { }
     }
-
     return `${asset.key}.${asset.fileExt}`
 }
 
 function getContentType(ext: string): string {
     const map: Record<string, string> = {
         bundle: 'application/javascript',
+        hbc: 'application/javascript',
         js: 'application/javascript',
         png: 'image/png',
         jpg: 'image/jpeg',
