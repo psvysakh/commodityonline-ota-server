@@ -2,6 +2,7 @@ import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
 import DeleteUpdateButton from '@/components/DeleteUpdateButton'
 import RollbackButton from '@/components/RollbackButton'
+import LocalTime from '@/components/LocalTime'
 
 export const dynamic = 'force-dynamic'
 
@@ -78,13 +79,7 @@ export default async function UpdatesPage() {
                                         {u.installs}
                                     </td>
                                     <td style={{ fontSize: 12 }}>
-                                        {new Date(u.createdAt).toLocaleDateString('en-US', {
-                                            year: 'numeric',
-                                            month: 'short',
-                                            day: 'numeric',
-                                            hour: '2-digit',
-                                            minute: '2-digit',
-                                        })}
+                                        <LocalTime dateStr={u.createdAt.toISOString()} />
                                     </td>
                                     <td>
                                         <RollbackButton id={u.id} />

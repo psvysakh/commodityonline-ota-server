@@ -1,5 +1,8 @@
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
+import LocalTime from '@/components/LocalTime'
+
+export const dynamic = 'force-dynamic'
 
 async function getStats() {
   const [totalUpdates, totalChannels, iosUpdates, androidUpdates, recentUpdates] =
@@ -275,12 +278,7 @@ export default async function DashboardPage() {
                       {u.installs}
                     </td>
                     <td style={{ fontSize: 12 }}>
-                      {new Date(u.createdAt).toLocaleDateString('en-US', {
-                        month: 'short',
-                        day: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
+                      <LocalTime dateStr={u.createdAt.toISOString()} />
                     </td>
                   </tr>
                 ))}

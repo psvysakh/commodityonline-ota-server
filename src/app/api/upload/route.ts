@@ -4,6 +4,7 @@ import { ensureGlobalAssetsDir, getGlobalAssetPath, getGlobalBundlePath } from '
 import crypto from 'crypto'
 import fs from 'fs'
 import path from 'path'
+import { validateUploadAuth } from '@/lib/upload-auth'
 
 /**
  * POST /api/upload
@@ -22,6 +23,9 @@ import path from 'path'
  * /api/assets can reconstruct the correct path without guessing.
  */
 export async function POST(req: NextRequest) {
+    const authError = validateUploadAuth(req)
+    if (authError) return authError
+
     const formData = await req.formData()
 
     const platform = formData.get('platform') as string
