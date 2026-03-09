@@ -32,16 +32,23 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: `Update "${updateId}" not found` }, { status: 404 })
     }
 
-    const body = await req.json() as { hash: string; key: string; fileExt: string; originalName: string }
-    const { hash, key, fileExt, originalName } = body
+    const body = await req.json() as { hash: string; key: string; fileExt: string; originalName: string; isBundle?: boolean }
+    const { hash, key, fileExt, originalName, isBundle } = body
 
     if (!hash || !key || !fileExt) {
         return NextResponse.json({ error: 'Missing required fields: hash, key, fileExt' }, { status: 400 })
     }
 
-    // Determine the S3 object key (path in the R2 bucket)
-    const isBundle = fileExt === 'bundle' || fileExt === 'hbc'
-    const s3Key = isBundle ? `bundles/${hash}.${fileExt}` : `assets/${hash}.${fileExt}`
+    // Determine the S3 object directory path in the R2 bucket
+    function getFolderForExtension(ext: string): string {
+        const imageExts = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg']
+        const fontExts = ['ttf', 'otf', 'woff', 'woff2']
+        if (imageExts.includes(ext.toLowerCase())) return 'images'
+        if (fontExts.includes(ext.toLowerCase())) return 'fonts'
+        return 'assets'
+    }
+
+    const s3Key = isBundle ? `bundles/${hash}.${fileExt}` : `${getFolderForExtension(fileExt)}/${hash}.${fileExt}`
 
     // Check if this file already exists in R2 (deduplication)
     const alreadyInR2 = await s3FileExists(s3Key)

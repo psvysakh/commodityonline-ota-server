@@ -29,14 +29,13 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: `Update "${updateId}" not found` }, { status: 404 })
     }
 
-    const body = await req.json() as { hash: string; key: string; fileExt: string; originalName: string; s3Key: string }
-    const { hash, key, fileExt, originalName, s3Key } = body
+    const body = await req.json() as { hash: string; key: string; fileExt: string; originalName: string; s3Key: string; isBundle?: boolean }
+    const { hash, key, fileExt, originalName, s3Key, isBundle } = body
 
     if (!hash || !key || !fileExt || !s3Key) {
         return NextResponse.json({ error: 'Missing required fields: hash, key, fileExt, s3Key' }, { status: 400 })
     }
 
-    const isBundle = fileExt === 'bundle' || fileExt === 'hbc'
     const r2Url = getPublicUrl(s3Key)
 
     const asset = await prisma.asset.create({
@@ -50,4 +49,5 @@ export async function POST(req: NextRequest) {
     })
 
     return NextResponse.json({ assetId: asset.id, r2Url }, { status: 201 })
+}
 }
