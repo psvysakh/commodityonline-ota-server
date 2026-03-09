@@ -3,6 +3,7 @@ import Link from 'next/link'
 import DeleteUpdateButton from '@/components/DeleteUpdateButton'
 import RollbackButton from '@/components/RollbackButton'
 import LocalTime from '@/components/LocalTime'
+import ChannelFilter from '@/components/ChannelFilter'
 
 export const dynamic = 'force-dynamic'
 
@@ -13,15 +14,25 @@ export default async function UpdatesPage({
 }) {
     const params = await searchParams
     const platformParam = typeof params.platform === 'string' ? params.platform.toLowerCase() : undefined
+    const channelParam = typeof params.channel === 'string' ? params.channel.toLowerCase() : undefined
 
-    const whereClause = platformParam && ['ios', 'android'].includes(platformParam)
-        ? { platform: platformParam }
-        : undefined
+    const whereClause: any = {}
+    if (platformParam && ['ios', 'android'].includes(platformParam)) {
+        whereClause.platform = platformParam
+    }
+    if (channelParam) {
+        whereClause.channel = { name: channelParam }
+    }
 
     const updates = await prisma.update.findMany({
-        where: whereClause,
+        where: Object.keys(whereClause).length > 0 ? whereClause : undefined,
         include: { channel: true, _count: { select: { assets: true } } },
         orderBy: { createdAt: 'desc' },
+    })
+
+    const allChannels = await prisma.channel.findMany({
+        select: { id: true, name: true },
+        orderBy: { name: 'asc' }
     })
 
     const tabs = [
@@ -38,7 +49,7 @@ export default async function UpdatesPage({
                         All <span className="gradient-text">Updates</span>
                     </h1>
                     <p style={{ color: 'var(--text-muted)', fontSize: 14 }}>
-                        {updates.length} total updates across {platformParam ? `the ${platformParam} platform` : 'all channels and platforms'}.
+                        {updates.length} total updates across {platformParam ? `the ${platformParam} platform` : 'all platforms'} {channelParam ? `in the ${channelParam} channel` : ''}.
                     </p>
                 </div>
                 <Link href="/publish" className="btn-primary">
@@ -46,29 +57,34 @@ export default async function UpdatesPage({
                 </Link>
             </div>
 
-            <div style={{ display: 'flex', gap: '8px', marginBottom: '24px' }}>
-                {tabs.map(tab => {
-                    const isActive = platformParam === tab.value
-                    return (
-                        <Link
-                            key={tab.label}
-                            href={tab.value ? `?platform=${tab.value}` : '?'}
-                            style={{
-                                padding: '8px 16px',
-                                borderRadius: '8px',
-                                fontSize: '14px',
-                                fontWeight: 600,
-                                background: isActive ? 'var(--bg-elevated)' : 'transparent',
-                                color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
-                                border: `1px solid ${isActive ? 'var(--border-color)' : 'transparent'}`,
-                                textDecoration: 'none',
-                                transition: 'all 0.2s ease'
-                            }}
-                        >
-                            {tab.label}
-                        </Link>
-                    )
-                })}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                    {tabs.map(tab => {
+                        const isActive = platformParam === tab.value
+                        return (
+                            <Link
+                                key={tab.label}
+                                href={tab.value ? `?platform=${tab.value}` : '?'}
+                                style={{
+                                    padding: '8px 16px',
+                                    borderRadius: '8px',
+                                    fontSize: '14px',
+                                    fontWeight: 600,
+                                    background: isActive ? 'var(--bg-elevated)' : 'transparent',
+                                    color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
+                                    border: `1px solid ${isActive ? 'var(--border-color)' : 'transparent'}`,
+                                    textDecoration: 'none',
+                                    transition: 'all 0.2s ease'
+                                }}
+                            >
+                                {tab.label}
+                            </Link>
+                        )
+                    })}
+                </div>
+                <div>
+                    <ChannelFilter channels={allChannels} currentChannel={channelParam} />
+                </div>
             </div>
 
             <div className="glass-card" style={{ overflow: 'hidden' }}>
