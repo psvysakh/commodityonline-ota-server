@@ -136,7 +136,7 @@ export async function GET(req: NextRequest) {
         assets: otherAssets,
         metadata: {},
         extra: {
-            expoClient: update.extra ? { extra: JSON.parse(update.extra) } : {},
+            expoClient: update.extra ? JSON.parse(update.extra) : {},
         },
     }
 
