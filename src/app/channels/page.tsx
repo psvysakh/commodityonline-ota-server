@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma'
 import CreateChannelForm from '@/components/CreateChannelForm'
+import DeleteChannelButton from '@/components/DeleteChannelButton'
 
 export const dynamic = 'force-dynamic'
 
@@ -38,6 +39,7 @@ export default async function ChannelsPage() {
                                 <th>Channel Name</th>
                                 <th>Total Updates</th>
                                 <th>Created</th>
+                                <th style={{ textAlign: 'right' }}>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -55,6 +57,11 @@ export default async function ChannelsPage() {
                                             month: 'short',
                                             day: 'numeric',
                                         })}
+                                    </td>
+                                    <td style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', height: '100%' }}>
+                                        {ch.name !== 'production' && (
+                                            <DeleteChannelButton id={ch.id} />
+                                        )}
                                     </td>
                                 </tr>
                             ))}
