@@ -234,6 +234,7 @@ function getContentType(ext: string): string {
     const map: Record<string, string> = {
         bundle: 'application/javascript',
         js: 'application/javascript',
+        hbc: 'application/javascript',
         png: 'image/png',
         jpg: 'image/jpeg',
         jpeg: 'image/jpeg',
