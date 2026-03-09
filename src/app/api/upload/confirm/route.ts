@@ -50,4 +50,3 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ assetId: asset.id, r2Url }, { status: 201 })
 }
-}
