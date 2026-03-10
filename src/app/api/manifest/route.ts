@@ -58,12 +58,14 @@ export async function GET(req: NextRequest) {
         )
     }
 
-    // Find the most recent update matching platform + runtimeVersion + channel
-    const update = await prisma.update.findFirst({
+    // Find the most recent update matching platform + runtimeVersion + channel that is published
+    const update: any = await prisma.update.findFirst({
         where: {
             platform,
             runtimeVersion,
             channelId: channel.id,
+            // @ts-ignore - Bypass Next.js TS cache for newly added Prisma field
+            isPublished: true,
         },
         include: { assets: true },
         orderBy: { createdAt: 'desc' },
@@ -107,7 +109,7 @@ export async function GET(req: NextRequest) {
         })()
 
     // --- Build manifest assets list ---
-    const allAssets = update.assets.map((asset) => {
+    const allAssets = update.assets.map((asset: any) => {
         return {
             // Normalize hash to base64url format — required by expo-updates native
             hash: toBase64UrlHash(asset.hash),
@@ -118,8 +120,8 @@ export async function GET(req: NextRequest) {
         }
     })
 
-    const launchAsset = allAssets.find((a) => a.contentType === 'application/javascript')
-    const otherAssets = allAssets.filter((a) => a.contentType !== 'application/javascript')
+    const launchAsset = allAssets.find((a: any) => a.contentType === 'application/javascript')
+    const otherAssets = allAssets.filter((a: any) => a.contentType !== 'application/javascript')
 
     if (!launchAsset) {
         return NextResponse.json(

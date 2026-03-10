@@ -28,6 +28,7 @@ model Update {
   message        String?  // Optional description for the update (e.g., "Rollback to...")
   extra          String?
   installs       Int      @default(0)
+  isPublished    Boolean  @default(false)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
   

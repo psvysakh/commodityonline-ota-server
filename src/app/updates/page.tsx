@@ -4,6 +4,7 @@ import DeleteUpdateButton from '@/components/DeleteUpdateButton'
 import RollbackButton from '@/components/RollbackButton'
 import LocalTime from '@/components/LocalTime'
 import ChannelFilter from '@/components/ChannelFilter'
+import TogglePublishButton from '@/components/TogglePublishButton'
 
 export const dynamic = 'force-dynamic'
 
@@ -111,6 +112,7 @@ export default async function UpdatesPage({
                                 <th>Update ID</th>
                                 <th>Platform</th>
                                 <th>Channel</th>
+                                <th>Status</th>
                                 <th>Runtime Version</th>
                                 <th>Assets</th>
                                 <th>Installs</th>
@@ -119,17 +121,8 @@ export default async function UpdatesPage({
                             </tr>
                         </thead>
                         <tbody>
-                            {updates.map((u: {
-                                id: string;
-                                platform: string;
-                                runtimeVersion: string;
-                                message?: string | null;
-                                createdAt: Date;
-                                installs: number;
-                                channel: { name: string };
-                                _count: { assets: number }
-                            }) => (
-                                <tr key={u.id}>
+                            {updates.map((u: any) => (
+                                <tr key={u.id} style={{ opacity: u.isPublished ? 1 : 0.6 }}>
                                     <td style={{ fontFamily: 'monospace', fontSize: 12, color: 'var(--text-primary)' }}>
                                         <span title={u.id}>{u.id.slice(0, 12)}…</span>
                                         {u.message && (
@@ -143,6 +136,9 @@ export default async function UpdatesPage({
                                     </td>
                                     <td>
                                         <span className="badge badge-channel">{u.channel.name}</span>
+                                    </td>
+                                    <td>
+                                        <TogglePublishButton id={u.id} isPublished={u.isPublished} />
                                     </td>
                                     <td style={{ color: 'var(--text-primary)', fontWeight: 600 }}>
                                         v{u.runtimeVersion}
