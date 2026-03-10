@@ -14,13 +14,14 @@ export default async function UpdatesPage({
 }) {
     const params = await searchParams
     const platformParam = typeof params.platform === 'string' ? params.platform.toLowerCase() : undefined
-    const channelParam = typeof params.channel === 'string' ? params.channel.toLowerCase() : undefined
+    const rawChannel = typeof params.channel === 'string' ? params.channel.toLowerCase() : undefined
+    const channelParam = rawChannel || 'production'
 
     const whereClause: any = {}
     if (platformParam && ['ios', 'android'].includes(platformParam)) {
         whereClause.platform = platformParam
     }
-    if (channelParam) {
+    if (channelParam !== 'all') {
         whereClause.channel = { name: channelParam }
     }
 
@@ -49,7 +50,7 @@ export default async function UpdatesPage({
                         All <span className="gradient-text">Updates</span>
                     </h1>
                     <p style={{ color: 'var(--text-muted)', fontSize: 14 }}>
-                        {updates.length} total updates across {platformParam ? `the ${platformParam} platform` : 'all platforms'} {channelParam ? `in the ${channelParam} channel` : ''}.
+                        {updates.length} total updates across {platformParam ? `the ${platformParam} platform` : 'all platforms'} {channelParam !== 'all' ? `in the ${channelParam} channel` : ''}.
                     </p>
                 </div>
                 <Link href="/publish" className="btn-primary">
@@ -58,13 +59,22 @@ export default async function UpdatesPage({
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                <div>
+                    <ChannelFilter channels={allChannels} currentChannel={channelParam} />
+                </div>
                 <div style={{ display: 'flex', gap: '8px' }}>
                     {tabs.map(tab => {
                         const isActive = platformParam === tab.value
+                        
+                        const p = new URLSearchParams()
+                        if (tab.value) p.set('platform', tab.value)
+                        if (rawChannel) p.set('channel', rawChannel)
+                        const href = p.toString() ? `?${p.toString()}` : '?'
+
                         return (
                             <Link
                                 key={tab.label}
-                                href={tab.value ? `?platform=${tab.value}` : '?'}
+                                href={href}
                                 style={{
                                     padding: '8px 16px',
                                     borderRadius: '8px',
@@ -81,9 +91,6 @@ export default async function UpdatesPage({
                             </Link>
                         )
                     })}
-                </div>
-                <div>
-                    <ChannelFilter channels={allChannels} currentChannel={channelParam} />
                 </div>
             </div>
 

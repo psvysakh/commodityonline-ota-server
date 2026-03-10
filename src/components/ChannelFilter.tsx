@@ -11,7 +11,7 @@ export default function ChannelFilter({ channels, currentChannel }: { channels: 
         const params = new URLSearchParams(searchParams.toString())
 
         if (val === 'all') {
-            params.delete('channel')
+            params.set('channel', 'all')
         } else {
             params.set('channel', val)
         }
@@ -42,7 +42,9 @@ export default function ChannelFilter({ channels, currentChannel }: { channels: 
             }}
         >
             <option value="all">All Channels</option>
-            {channels.map(ch => (
+            <option value="production">Production</option>
+            <option value="staging">Staging</option>
+            {channels.filter(ch => ch.name !== 'production' && ch.name !== 'staging').map(ch => (
                 <option key={ch.id} value={ch.name}>{ch.name}</option>
             ))}
         </select>
