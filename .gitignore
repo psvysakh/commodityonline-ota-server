@@ -48,3 +48,16 @@ next-env.d.ts
 
 # Uploads
 /uploads/
+
+# Test / debug artifacts (prevent accidental commits)
+*.zip
+*.txt
+*.mjs
+test-*.ts
+test-*.js
+benchmark*.ts
+benchmark*.js
+benchmark*.mjs
+*_test.*
+manifest_test*
+local_manifest*
