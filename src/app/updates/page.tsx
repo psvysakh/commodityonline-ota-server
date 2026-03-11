@@ -124,10 +124,27 @@ export default async function UpdatesPage({
                             {updates.map((u: any) => (
                                 <tr key={u.id} style={{ opacity: u.isPublished ? 1 : 0.6 }}>
                                     <td style={{ fontFamily: 'monospace', fontSize: 12, color: 'var(--text-primary)' }}>
-                                        <span title={u.id}>{u.id.slice(0, 12)}…</span>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <span title={u.id}>{u.id.slice(0, 12)}…</span>
+                                            {u.isMandatory && (
+                                                <span style={{ 
+                                                    background: 'rgba(239, 68, 68, 0.15)', 
+                                                    color: '#ef4444', 
+                                                    padding: '2px 6px', 
+                                                    borderRadius: '4px', 
+                                                    fontSize: 10, 
+                                                    fontWeight: 'bold', 
+                                                    textTransform: 'uppercase', 
+                                                    fontFamily: 'sans-serif',
+                                                    border: '1px solid rgba(239, 68, 68, 0.3)'
+                                                }}>
+                                                    Mandatory
+                                                </span>
+                                            )}
+                                        </div>
                                         {u.message && (
-                                            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4, fontFamily: 'sans-serif' }}>
-                                                {u.message}
+                                            <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 6, fontFamily: 'sans-serif', fontWeight: 500 }}>
+                                                <span style={{ opacity: 0.6 }}>↳</span> {u.message}
                                             </div>
                                         )}
                                     </td>
