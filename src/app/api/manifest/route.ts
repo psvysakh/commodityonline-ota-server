@@ -237,12 +237,20 @@ export async function GET(req: NextRequest) {
         // Build the multipart body exactly as the expo-updates native parser expects:
         //   - Content-Type: application/json (must exactly match)
         //   - Content-Disposition: inline; name="manifest" (must exactly match)
+        //   - expo-signature MUST be in the part sub-headers (not just root HTTP headers)
+        //     per the Expo Updates Protocol v1 spec. The native SDK reads the signature
+        //     from the individual part headers, NOT the root response headers.
         //   - Proper CRLF separators (must be strict)
         const CRLF = '\r\n'
+        const signatureHeader = commonHeaders['expo-signature']
+            ? `expo-signature: ${commonHeaders['expo-signature']}` + CRLF
+            : ''
+
         const body =
             `--${boundary}` + CRLF +
             `Content-Disposition: inline; name="manifest"` + CRLF +
             `Content-Type: application/json` + CRLF +
+            signatureHeader +
             CRLF +
             manifestJson + CRLF +
             `--${boundary}--` + CRLF
