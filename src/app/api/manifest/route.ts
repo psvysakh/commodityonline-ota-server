@@ -89,7 +89,7 @@ export async function GET(req: NextRequest) {
             })
         },
         [`latest-update-${platform}-${runtimeVersion}-${channel.id}`],
-        { tags: ['manifest'], revalidate: 3600 } // Cache for 1 hour, or until manually flushed
+        { tags: ['manifest'], revalidate: 60 } // Cache for 60 seconds
     )
 
     const update: any = await getCachedLatestUpdate(platform, runtimeVersion, channel.id)
