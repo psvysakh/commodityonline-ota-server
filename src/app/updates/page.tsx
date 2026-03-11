@@ -44,7 +44,7 @@ export default async function UpdatesPage({
     ]
 
     return (
-        <div style={{ padding: '36px 40px', maxWidth: 1100 }}>
+        <div style={{ padding: '36px 40px', width: '100%', maxWidth: '100%' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }}>
                 <div>
                     <h1 style={{ fontSize: 28, fontWeight: 800, marginBottom: 8 }}>
@@ -95,7 +95,7 @@ export default async function UpdatesPage({
                 </div>
             </div>
 
-            <div className="glass-card" style={{ overflow: 'hidden' }}>
+            <div className="glass-card" style={{ overflowX: 'auto', overflowY: 'hidden' }}>
                 {updates.length === 0 ? (
                     <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--text-muted)' }}>
                         <div style={{ fontSize: 48, marginBottom: 16 }}>📭</div>
