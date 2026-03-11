@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
     const authError = validateUploadAuth(req)
     if (authError) return authError
     const body = await req.json()
-    const { platform, runtimeVersion, channelName, extra = null } = body
+    const { platform, runtimeVersion, channelName, extra = null, isMandatory = false } = body
 
     if (!platform || !runtimeVersion || !channelName) {
         return NextResponse.json(
@@ -44,6 +44,8 @@ export async function POST(req: NextRequest) {
             runtimeVersion,
             channelId: channel.id,
             extra: extra ?? null,
+            // @ts-ignore - Bypass Prisma typings issue
+            isMandatory,
             assets: { create: [] },
         },
     })

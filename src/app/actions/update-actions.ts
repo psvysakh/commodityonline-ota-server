@@ -1,7 +1,7 @@
 'use server'
 
 import { prisma } from '@/lib/prisma'
-import { revalidatePath } from 'next/cache'
+import { revalidatePath, revalidateTag } from 'next/cache'
 
 export async function toggleUpdatePublishStatus(id: string, isPublished: boolean) {
     try {
@@ -12,8 +12,9 @@ export async function toggleUpdatePublishStatus(id: string, isPublished: boolean
                 isPublished
             } as any
         })
-        
         revalidatePath('/updates')
+        // @ts-ignore - Bypass Next.js TS typings issue for cache tags
+        revalidateTag('manifest')
         return { success: true }
     } catch (error) {
         console.error('Failed to toggle publish status:', error)

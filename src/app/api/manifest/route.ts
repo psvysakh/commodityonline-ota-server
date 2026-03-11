@@ -1,5 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { unstable_cache } from 'next/cache'
+import { readFileSync, existsSync } from 'fs'
+import path from 'path'
+import { 
+    signBufferRSASHA256AndVerify,
+    convertPrivateKeyPEMToPrivateKey,
+    convertCertificatePEMToCertificate
+} from '@expo/code-signing-certificates'
 
 /**
  * GET /api/manifest
@@ -58,18 +66,28 @@ export async function GET(req: NextRequest) {
         )
     }
 
-    // Find the most recent update matching platform + runtimeVersion + channel that is published
-    const update: any = await prisma.update.findFirst({
-        where: {
-            platform,
-            runtimeVersion,
-            channelId: channel.id,
-            // @ts-ignore - Bypass Next.js TS cache for newly added Prisma field
-            isPublished: true,
+    // Find the most recent update matching platform + runtimeVersion + channel
+    // IMPORTANT: Only return published updates!
+    // Using unstable_cache prevents the DB from being hammered on every app open.
+    const getCachedLatestUpdate = unstable_cache(
+        async (p: string, rv: string, cid: string) => {
+            return await prisma.update.findFirst({
+                where: {
+                    platform: p,
+                    runtimeVersion: rv,
+                    channelId: cid,
+                    // @ts-ignore - Bypass Prisma typings issue since local client hasn't been generated
+                    isPublished: true, // Respect the LIVE/HIDDEN status
+                },
+                include: { assets: true },
+                orderBy: { createdAt: 'desc' },
+            })
         },
-        include: { assets: true },
-        orderBy: { createdAt: 'desc' },
-    })
+        [`latest-update-${platform}-${runtimeVersion}-${channel.id}`],
+        { tags: ['manifest'], revalidate: 3600 } // Cache for 1 hour, or until manually flushed
+    )
+
+    const update: any = await getCachedLatestUpdate(platform, runtimeVersion, channel.id)
 
     if (!update) {
         return NextResponse.json(
@@ -138,7 +156,10 @@ export async function GET(req: NextRequest) {
         assets: otherAssets,
         metadata: {},
         extra: {
-            expoClient: update.extra ? JSON.parse(update.extra) : {},
+            expoClient: {
+                ...(update.extra ? JSON.parse(update.extra) : {}),
+                isMandatory: update.isMandatory || false,
+            }
         },
     }
 
@@ -148,10 +169,40 @@ export async function GET(req: NextRequest) {
         'cache-control': 'private, max-age=0',
     }
 
+    const manifestJson = JSON.stringify(manifest)
+
+    // --- Sign the Update (Phase 4: Code Signing) ---
+    if (req.headers.get('expo-expect-signature')) {
+        try {
+            const privateKeyPath = path.join(process.cwd(), 'private-key.pem')
+            const certPath = path.join(process.cwd(), 'certificate.pem')
+
+            if (existsSync(privateKeyPath) && existsSync(certPath)) {
+                const privateKeyPEM = readFileSync(privateKeyPath, 'utf8')
+                const certPEM = readFileSync(certPath, 'utf8')
+
+                const privateKey = convertPrivateKeyPEMToPrivateKey(privateKeyPEM)
+                const certificate = convertCertificatePEMToCertificate(certPEM)
+
+                const signature = signBufferRSASHA256AndVerify(
+                    privateKey,
+                    certificate,
+                    Buffer.from(manifestJson, 'utf8')
+                )
+                // Attach the Expo Structured Field Values signature string
+                commonHeaders['expo-signature'] = `sig="${signature}", keyid="main"`
+                console.log('[manifest] 🔒 Payload signed successfully.')
+            } else {
+                console.warn('[manifest] ⚠️ Client requested a signature, but private-key.pem is missing on the server!')
+            }
+        } catch (error) {
+            console.error('[manifest] ❌ Failed to sign manifest:', error)
+        }
+    }
+
     // --- Protocol v1: multipart/mixed response ---
     if (useMultipart) {
         const boundary = `expo-manifest-boundary-${update.id.replace(/-/g, '')}`
-        const manifestJson = JSON.stringify(manifest)
 
         // Build the multipart body exactly as the expo-updates native parser expects:
         //   - Content-Type: application/json (must exactly match)
@@ -176,10 +227,11 @@ export async function GET(req: NextRequest) {
     }
 
     // --- Protocol v0 fallback: plain JSON ---
-    return NextResponse.json(manifest, {
+    return new NextResponse(manifestJson, {
         headers: {
             ...commonHeaders,
             'expo-protocol-version': '0',
+            'content-type': 'application/json'
         },
     })
 }
