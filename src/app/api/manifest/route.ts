@@ -38,7 +38,8 @@ export async function GET(req: NextRequest) {
     console.log('[manifest] expo-platform         :', platform)
     console.log('[manifest] expo-runtime-version  :', runtimeVersion)
     console.log('[manifest] expo-channel-name     :', req.headers.get('expo-channel-name'))
-    const customChannel = req.headers.get('expo-extra-custom-channel')
+    const customChannelRaw = req.headers.get('expo-extra-custom-channel')
+    const customChannel = customChannelRaw === 'default' ? null : customChannelRaw
     const baseChannelName = req.headers.get('expo-channel-name') ?? 'production'
     const channelName = customChannel || baseChannelName
 

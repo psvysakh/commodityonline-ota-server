@@ -61,3 +61,5 @@ benchmark*.mjs
 *_test.*
 manifest_test*
 local_manifest*
+
+ADVANCED_FEATURES.md
