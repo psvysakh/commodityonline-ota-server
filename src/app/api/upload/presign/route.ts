@@ -64,6 +64,13 @@ export async function POST(req: NextRequest) {
                 updateId,
             },
         })
+
+        if (isBundle) {
+            const { revalidateTag } = require('next/cache')
+            revalidateTag('manifest')
+            console.log(`[publish-cached] Invalidated 'manifest' cache. Update ${updateId} is now live.`)
+        }
+
         return NextResponse.json({ cached: true, r2Url: getPublicUrl(s3Key) }, { status: 200 })
     }
 
