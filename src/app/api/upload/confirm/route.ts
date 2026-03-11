@@ -48,5 +48,11 @@ export async function POST(req: NextRequest) {
         },
     })
 
+    if (isBundle) {
+        const { revalidateTag } = require('next/cache')
+        revalidateTag('manifest')
+        console.log(`[publish] Invalidated 'manifest' cache. Update ${updateId} is now live.`)
+    }
+
     return NextResponse.json({ assetId: asset.id, r2Url }, { status: 201 })
 }

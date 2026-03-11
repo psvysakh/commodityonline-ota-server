@@ -150,7 +150,7 @@ export async function GET(req: NextRequest) {
 
     const manifest = {
         id: update.id,
-        createdAt: update.createdAt.toISOString(),
+        createdAt: new Date(update.createdAt).toISOString(),
         runtimeVersion: update.runtimeVersion,
         launchAsset,
         assets: otherAssets,
@@ -174,13 +174,29 @@ export async function GET(req: NextRequest) {
     // --- Sign the Update (Phase 4: Code Signing) ---
     if (req.headers.get('expo-expect-signature')) {
         try {
-            const privateKeyPath = path.join(process.cwd(), 'private-key.pem')
-            const certPath = path.join(process.cwd(), 'certificate.pem')
+            // Priority 1: Environment Variables
+            let privateKeyPEM = process.env.OTA_PRIVATE_KEY?.replace(/\\n/g, '\n')
+            let certPEM = process.env.OTA_CERTIFICATE?.replace(/\\n/g, '\n')
 
-            if (existsSync(privateKeyPath) && existsSync(certPath)) {
-                const privateKeyPEM = readFileSync(privateKeyPath, 'utf8')
-                const certPEM = readFileSync(certPath, 'utf8')
+            // Priority 2: Files on disk
+            if (!privateKeyPEM || !certPEM) {
+                const privateKeyPath = path.join(process.cwd(), 'private-key.pem')
+                const certPath = path.join(process.cwd(), 'certificate.pem')
+                if (existsSync(privateKeyPath) && existsSync(certPath)) {
+                    privateKeyPEM = readFileSync(privateKeyPath, 'utf8')
+                    certPEM = readFileSync(certPath, 'utf8')
+                } else {
+                    // Try the keys directory as a fallback
+                    const altPrivateKeyPath = path.join(process.cwd(), 'keys', 'private-key.pem')
+                    const altCertPath = path.join(process.cwd(), 'keys', 'certificate.pem')
+                    if (existsSync(altPrivateKeyPath) && existsSync(altCertPath)) {
+                        privateKeyPEM = readFileSync(altPrivateKeyPath, 'utf8')
+                        certPEM = readFileSync(altCertPath, 'utf8')
+                    }
+                }
+            }
 
+            if (privateKeyPEM && certPEM) {
                 const privateKey = convertPrivateKeyPEMToPrivateKey(privateKeyPEM)
                 const certificate = convertCertificatePEMToCertificate(certPEM)
 
@@ -193,7 +209,7 @@ export async function GET(req: NextRequest) {
                 commonHeaders['expo-signature'] = `sig="${signature}", keyid="main"`
                 console.log('[manifest] 🔒 Payload signed successfully.')
             } else {
-                console.warn('[manifest] ⚠️ Client requested a signature, but private-key.pem is missing on the server!')
+                console.warn('[manifest] ⚠️ Client requested a signature, but private key or certificate is missing on the server!')
             }
         } catch (error) {
             console.error('[manifest] ❌ Failed to sign manifest:', error)
