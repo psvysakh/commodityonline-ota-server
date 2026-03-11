@@ -30,7 +30,6 @@ import {
 export async function GET(req: NextRequest) {
     const platform = req.headers.get('expo-platform')
     const runtimeVersion = req.headers.get('expo-runtime-version')
-    const channelName = req.headers.get('expo-channel-name') ?? 'production'
     const currentUpdateId = req.headers.get('expo-current-update-id') ?? ''
     const acceptHeader = req.headers.get('accept') ?? 'application/json'
 
@@ -39,6 +38,11 @@ export async function GET(req: NextRequest) {
     console.log('[manifest] expo-platform         :', platform)
     console.log('[manifest] expo-runtime-version  :', runtimeVersion)
     console.log('[manifest] expo-channel-name     :', req.headers.get('expo-channel-name'))
+    const customChannel = req.headers.get('expo-extra-custom-channel')
+    const baseChannelName = req.headers.get('expo-channel-name') ?? 'production'
+    const channelName = customChannel || baseChannelName
+
+    console.log('[manifest] expo-extra-custom-channel:', customChannel)
     console.log('[manifest] expo-current-update-id:', req.headers.get('expo-current-update-id'))
     console.log('[manifest] accept                :', acceptHeader)
     console.log('[manifest] resolved channelName  :', channelName)
