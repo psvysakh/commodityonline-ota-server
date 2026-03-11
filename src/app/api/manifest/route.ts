@@ -94,17 +94,15 @@ export async function GET(req: NextRequest) {
     const update: any = await getCachedLatestUpdate(platform, runtimeVersion, channel.id)
 
     if (!update) {
-        return NextResponse.json(
-            { error: `No update found for platform="${platform}" runtimeVersion="${runtimeVersion}" channel="${channelName}"` },
-            {
-                status: 404,
-                headers: {
-                    'expo-protocol-version': '1',
-                    'expo-sfv-version': '0',
-                    'cache-control': 'private, max-age=0',
-                }
-            }
-        )
+        // Return 204 No Content gracefully. Throwing 404 crashes the Expo updates client!
+        return new NextResponse(null, {
+            status: 204,
+            headers: {
+                'expo-protocol-version': '1',
+                'expo-sfv-version': '0',
+                'cache-control': 'private, max-age=0',
+            },
+        })
     }
 
     // Client already has this update → nothing to do
