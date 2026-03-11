@@ -177,22 +177,30 @@ export async function GET(req: NextRequest) {
             // Priority 1: Environment Variables
             let privateKeyPEM = process.env.OTA_PRIVATE_KEY?.replace(/\\n/g, '\n')
             let certPEM = process.env.OTA_CERTIFICATE?.replace(/\\n/g, '\n')
+            let keySource = 'environment variables'
 
             // Priority 2: Files on disk
             if (!privateKeyPEM || !certPEM) {
-                const privateKeyPath = path.join(process.cwd(), 'private-key.pem')
-                const certPath = path.join(process.cwd(), 'certificate.pem')
-                if (existsSync(privateKeyPath) && existsSync(certPath)) {
-                    privateKeyPEM = readFileSync(privateKeyPath, 'utf8')
-                    certPEM = readFileSync(certPath, 'utf8')
-                } else {
-                    // Try the keys directory as a fallback
-                    const altPrivateKeyPath = path.join(process.cwd(), 'keys', 'private-key.pem')
-                    const altCertPath = path.join(process.cwd(), 'keys', 'certificate.pem')
-                    if (existsSync(altPrivateKeyPath) && existsSync(altCertPath)) {
-                        privateKeyPEM = readFileSync(altPrivateKeyPath, 'utf8')
-                        certPEM = readFileSync(altCertPath, 'utf8')
-                    }
+                const cwd = process.cwd()
+                // Check root directory
+                const rootPrivateKeyPath = path.join(cwd, 'private-key.pem')
+                const rootCertPath = path.join(cwd, 'certificate.pem')
+                // Check keys/ subdirectory
+                const keysPrivateKeyPath = path.join(cwd, 'keys', 'private-key.pem')
+                const keysCertPath = path.join(cwd, 'keys', 'certificate.pem')
+
+                console.log(`[manifest] Searching for code signing keys. cwd=${cwd}`)
+                console.log(`[manifest] Checking: ${rootPrivateKeyPath} (exists=${existsSync(rootPrivateKeyPath)})`)
+                console.log(`[manifest] Checking: ${keysPrivateKeyPath} (exists=${existsSync(keysPrivateKeyPath)})`)
+
+                if (existsSync(rootPrivateKeyPath) && existsSync(rootCertPath)) {
+                    privateKeyPEM = readFileSync(rootPrivateKeyPath, 'utf8')
+                    certPEM = readFileSync(rootCertPath, 'utf8')
+                    keySource = `root directory (${rootPrivateKeyPath})`
+                } else if (existsSync(keysPrivateKeyPath) && existsSync(keysCertPath)) {
+                    privateKeyPEM = readFileSync(keysPrivateKeyPath, 'utf8')
+                    certPEM = readFileSync(keysCertPath, 'utf8')
+                    keySource = `keys/ directory (${keysPrivateKeyPath})`
                 }
             }
 
@@ -207,12 +215,18 @@ export async function GET(req: NextRequest) {
                 )
                 // Attach the Expo Structured Field Values signature string
                 commonHeaders['expo-signature'] = `sig="${signature}", keyid="main"`
-                console.log('[manifest] 🔒 Payload signed successfully.')
+                console.log(`[manifest] ✅ Payload signed successfully using ${keySource}.`)
             } else {
-                console.warn('[manifest] ⚠️ Client requested a signature, but private key or certificate is missing on the server!')
+                // The client REQUIRES a signature — return a 500 so PM2 logs show the error
+                const errMsg = '[manifest] ❌ Client requested a signature (expo-expect-signature), but NO private key or certificate was found! ' +
+                    'Set OTA_PRIVATE_KEY and OTA_CERTIFICATE env vars, or place private-key.pem and certificate.pem in the keys/ directory. ' +
+                    `Server cwd: ${process.cwd()}`
+                console.error(errMsg)
+                return NextResponse.json({ error: 'Code signing keys not found on server. Cannot sign manifest.' }, { status: 500 })
             }
         } catch (error) {
             console.error('[manifest] ❌ Failed to sign manifest:', error)
+            return NextResponse.json({ error: `Failed to sign manifest: ${error}` }, { status: 500 })
         }
     }
 
