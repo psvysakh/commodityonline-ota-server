@@ -91,10 +91,7 @@ export default function Sidebar() {
                     <div key={group.section}>
                         <div className="section-label">{group.section}</div>
                         {group.items.map((item) => {
-                            const isActive =
-                                item.href === '/'
-                                    ? pathname === '/'
-                                    : pathname.startsWith(item.href)
+                            const isActive = pathname === item.href
                             return (
                                 <Link
                                     key={item.href}
