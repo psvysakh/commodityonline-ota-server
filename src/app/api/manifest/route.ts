@@ -65,10 +65,15 @@ export async function GET(req: NextRequest) {
     })
 
     if (!channel) {
-        return NextResponse.json(
-            { error: `Channel "${channelName}" not found. Create it in the dashboard first.` },
-            { status: 404 }
-        )
+        console.log(`[manifest] → 204: channel "${channelName}" not found in DB (returning no-update gracefully)`)
+        return new NextResponse(null, {
+            status: 204,
+            headers: {
+                'expo-protocol-version': '1',
+                'expo-sfv-version': '0',
+                'cache-control': 'private, max-age=0',
+            },
+        })
     }
 
     // Find the most recent update matching platform + runtimeVersion + channel
