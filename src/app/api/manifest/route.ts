@@ -94,8 +94,11 @@ export async function GET(req: NextRequest) {
 
     const update: any = await getCachedLatestUpdate(platform, runtimeVersion, channel.id)
 
+    console.log('[manifest] latest update found  :', update?.id ?? 'NONE')
+    console.log('[manifest] client current update :', currentUpdateId || '(empty)')
+
     if (!update) {
-        // Return 204 No Content gracefully. Throwing 404 crashes the Expo updates client!
+        console.log('[manifest] → 204: no update exists for this channel/platform/runtime')
         return new NextResponse(null, {
             status: 204,
             headers: {
@@ -108,6 +111,7 @@ export async function GET(req: NextRequest) {
 
     // Client already has this update → nothing to do
     if (update.id === currentUpdateId) {
+        console.log('[manifest] → 204: client already has latest update')
         return new NextResponse(null, {
             status: 204,
             headers: {
@@ -117,6 +121,8 @@ export async function GET(req: NextRequest) {
             },
         })
     }
+
+    console.log('[manifest] → 200: serving update', update.id)
 
     // Build asset URLs. Prefer the explicit NEXT_PUBLIC_BASE_URL env var so that
     // reverse-proxy setups (e.g. Apache → Node on Cloudways) don't accidentally
