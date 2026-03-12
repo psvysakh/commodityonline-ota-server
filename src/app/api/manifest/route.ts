@@ -38,12 +38,8 @@ export async function GET(req: NextRequest) {
     console.log('[manifest] expo-platform         :', platform)
     console.log('[manifest] expo-runtime-version  :', runtimeVersion)
     console.log('[manifest] expo-channel-name     :', req.headers.get('expo-channel-name'))
-    const customChannelRaw = req.headers.get('expo-extra-custom-channel')
-    const customChannel = customChannelRaw === 'default' ? null : customChannelRaw
-    const baseChannelName = req.headers.get('expo-channel-name') ?? 'production'
-    const channelName = customChannel || baseChannelName
+    const channelName = req.headers.get('expo-channel-name') ?? 'production'
 
-    console.log('[manifest] expo-extra-custom-channel:', customChannel)
     console.log('[manifest] expo-current-update-id:', req.headers.get('expo-current-update-id'))
     console.log('[manifest] accept                :', acceptHeader)
     console.log('[manifest] resolved channelName  :', channelName)
